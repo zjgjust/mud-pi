@@ -109,6 +109,8 @@ class MudServer(object):
         服务启动时调用一次
         """
         self._loged_player = players
+    def getLogedPlayersInfo(self,key,kkey):
+            return self._loged_player[key][kkey]
 
     def addLogedPlayers(self,player):
         """
@@ -116,9 +118,9 @@ class MudServer(object):
         :param player:
         :return:
         """
-        if self._loged_player.has_key(player["user"]):
+        if self._loged_player.has_key(player["user_name"]):
             return
-        self._loged_player[player["user"]] = player
+        self._loged_player[player["user_name"]] = player
 
     def setLogedPlayerInfo(self,key,kkey,value):
         #设置注册过的用户的值,这个主要在用户登录的时候设置"is_online"位
@@ -126,12 +128,17 @@ class MudServer(object):
             return
         self._loged_player[key][kkey] = value
         if kkey == "is_online":
-            if value == True:
-                self._loged_player[key]["start_time"] = time.time()
-            else:
+            if value == False:
                 self._loged_player[key]["lasting_time"] = time.time() - self._loged_player[key]["start_time"]
 
-    def _savePlayers(self):
+    def offLogedPlayer(self,user_name):
+        if self._loged_player.has_key(user_name):
+            self._loged_player[user_name]["is_online"] = False
+            self._loged_player[user_name]["lasting_time"] = self._loged_player[user_name]["lasting_time"] +\
+                                                            time.time() - self._loged_player[user_name]["start_time"]
+            self.savePlayers()
+
+    def savePlayers(self):
         # 保存注册过的用户信息,主要包括用户名,密码,在线时间
         try:
             fp = open('playerInfo.txt','w')
@@ -139,10 +146,12 @@ class MudServer(object):
             print 'could not open file:', e
         for key,value in self._loged_player.items():
             if value["is_online"] == True:
-                value["lasting_time"] = time.time() - value["start_time"]
-            line = value["name"] + " " + value["pass_word"] + " " + str(value["lasting_time"]) + "\n"
-            fp.write(line)
+                value["lasting_time"] = time.time() - value["start_time"] + value["lasting_time"]
+            line_info = value["user_name"] + " " + value["pass_word"] + " " + str(value["lasting_time"]) + "\n"
+            fp.write(line_info)
 
+    def hasLoged(self,user_name):
+        return self._loged_player.has_key(user_name)
 
     def __delete__(self, instance):
         self.savePlayers()

@@ -56,9 +56,6 @@ def loadPlayersInformation(file_name):
         }
     return log_players
 
-# stores the players in the game
-
-players = {}
 # stores the logined players in the game
 logPlayers = {}
 logPlayers = loadPlayersInformation('playerInfo.txt')
@@ -66,6 +63,9 @@ logPlayers = loadPlayersInformation('playerInfo.txt')
 # start the server
 mud = MudServer()
 mud.setLogedPlayers(logPlayers)
+
+# stores the players in the game
+connectPlayers = {}
 
 # main game loop. We loop forever (i.e. until the program is terminated)
 while True:
@@ -77,8 +77,7 @@ while True:
     # 'update' must be called in the loop to keep the game running and give
     # us up-to-date information
     mud.update()
-    
-    
+
     # go through any newly connected players
     for id in mud.get_new_players():
     
@@ -87,13 +86,13 @@ while True:
         # The dictionary key is the player's id number. Start them off in the 
         # 'Tavern' room.
         # Try adding more player stats - level, gold, inventory, etc
-        players[id] = { 
-            "name": None,
+        connectPlayers[id] = {
+            "user_name": None,
             "room": "Tavern",
             "lasting_time":0,
             "start_time":0,
             "is_logined":False,
-            "pass_word":""
+            "pass_word":"",
         }
         # send the new player a prompt for their name
         mud.send_connect_message(id)
@@ -103,79 +102,98 @@ while True:
     
         # if for any reason the player isn't in the player map, skip them and 
         # move on to the next one
-        if id not in players: continue
+        if id not in connectPlayers: continue
         
         # go through all the players in the game
-        for pid,pl in players.items():
+        for pid,pl in connectPlayers.items():
             # send each player a message to tell them about the diconnected player
-            mud.send_message(pid,"%s quit the game" % players[id]["name"])
-            
+            mud.send_message(pid,"%s quit the game" % connectPlayers[id]["user_name"])
+
+        # log user message
+        mud.offLogedPlayer(connectPlayers[id]["user_name"])
+
         # remove the player's entry in the player dictionary
-        del(players[id])
-    
-    
+        del(connectPlayers[id])
+
     # go through any new commands sent from players
     for id,command,params in mud.get_commands():
     
         # if for any reason the player isn't in the player map, skip them and
         # move on to the next one
-        if id not in players: continue
+        if id not in connectPlayers: continue
     
         # if the player hasn't given their name yet, use this first command as their name
         # 'login' command
         if command == "login":
             # login new user
-            players[id]["is_logined"] = True
+            if params == "":
+                mud.send_message(id, "Unknown command")
+                continue
             user_name,pass_word = params.split(" ")
-            players[id]["name"] = user_name
-            players[id]["pass_word"] = pass_word
-            player = {"user_name":user_name,
+            if(mud.hasLoged(user_name)):
+                mud.send_message(id,"The user has been loged, please use another user name.")
+                continue
+            connectPlayers[id]["is_logined"] = True
+            connectPlayers[id]["user_name"] = user_name
+            connectPlayers[id]["pass_word"] = pass_word
+            new_log_player = {"user_name":user_name,
                       "pass_word":pass_word,
                       "lasting_time":0,
                       "is_online":False,
                       "start_time":0}
-            mud.addLogedPlayers(player)
+            mud.addLogedPlayers(new_log_player)
             mud.send_message(id,"you have logined successfully with name: %s and password: %s"
-                             % (players[id]["name"],players[id]["pass_word"]))
+                             % (connectPlayers[id]["user_name"],connectPlayers[id]["pass_word"]))
         # 'land' command
         elif command == "land":
             # land user
+            if params == "":
+                mud.send_message(id, "Unknown command")
+                continue
             user_name,pass_word = params.split(" ")[0:2]
-            if players[id]["name"] != user_name:
-                mud.send_message(id,"There's not user: %s, please login the new user" %(user_name))
-            elif players[id]["pass_word"] != pass_word:
+            if not mud.hasLoged(user_name):
+                mud.send_message(id, "There's not user: %s, please login the new user" % (user_name))
+            elif mud.getLogedPlayersInfo(user_name,"pass_word") != pass_word:
                 mud.send_message(id,"The password is wrong")
             else:
-                players[id]["start_time"] = time.time()
-                mud.setLogedPlayerInfo(players[id]["user_name"],"is_online",True)
+                current_time = time.time()
+                connectPlayers[id]["user_name"] = user_name
+                connectPlayers[id]["pass_word"] = pass_word
+                connectPlayers[id]["start_time"] = current_time
+                mud.setLogedPlayerInfo(connectPlayers[id]["user_name"],"is_online",True)
+                mud.setLogedPlayerInfo(connectPlayers[id]["user_name"],"start_time",current_time)
                 # send message to all players
-                for pid, pl in players.items():
+                for pid, pl in connectPlayers.items():
                     # send each player a message to tell them about the new player
-                    mud.send_message(pid, "%s entered the game" % players[id]["name"])
+                    mud.send_message(pid, "%s entered the game" % connectPlayers[id]["user_name"])
                 # send message to the new land players
-                mud.send_message(id,"Welcome to the game, %s. Type 'help' for a list of commands. Have fun!" % players[id]["name"])
-
+                mud.send_message(id,"""Welcome to the game, %s. Type 'help' for a list of commands. Have fun!""" % connectPlayers[id]["user_name"])
         # 'help' command
         elif command == "help":
-        
             # send the player back the list of possible commands
             mud.send_message(id,"Commands:")
             mud.send_message(id,"  say <message>  - Says something out loud, e.g. 'say Hello'")
-            mud.send_message(id,"  look           - Examines the surroundings, e.g. 'look'")
-            mud.send_message(id,"  go <exit>      - Moves through the exit specified, e.g. 'go outside'")
+           # mud.send_message(id,"  look           - Examines the surroundings, e.g. 'look'")
+           # mud.send_message(id,"  go <exit>      - Moves through the exit specified, e.g. 'go outside'")
             mud.send_message(id,"  login <username> <password> - login new user ,e.g. 'login zjg 123456")
             mud.send_message(id,"  land <username> <password> - land the user ,e.g. 'land zjg 123456'")
 
         # 'say' command
         elif command == "chat":
-            
             # go through every player in the game
-            for pid,pl in players.items():
+            for pid,pl in connectPlayers.items():
                 # if they're in the same room as the player
-                if players[pid]["room"] == players[id]["room"]:
+                if connectPlayers[pid]["room"] == connectPlayers[id]["room"]:
                     # send them a message telling them what the player said
-                    mud.send_message(pid,"%s says: %s" % (players[id]["name"],params) )
-                    
+                    mud.send_message(pid,"%s says: %s" % (connectPlayers[id]["user_name"],params) )
+                    # some other, unrecognised command
+        # 'save' command
+        elif command == "save":
+            mud.savePlayers()
+        else:
+            # send back an 'unknown command' message
+            mud.send_message(id, "Unknown command: %s" % command)
+    """
         # 'look' command
         elif command == "look":
         
@@ -236,9 +254,6 @@ while True:
             else:
                 # send back an 'unknown exit' message
                 mud.send_message(id, "Unknown exit '%s'" % ex)
-                
-        # some other, unrecognised command
-        else:
-            # send back an 'unknown command' message
-            mud.send_message(id, "Unknown command '%s'" % command)
+    """
+
 
