@@ -58,12 +58,29 @@ mud.setLogedPlayers(logPlayers)
 # stores the players in the game
 connectPlayers = {}
 
+# 21gaming
+is_21gaming = False
+start_time_21game = 0
+answers_21game = {}
+
 # main game loop. We loop forever (i.e. until the program is terminated)
 while True:
 
 	# pause for 1/5 of a second on each loop, so that we don't constantly 
 	# use 100% CPU time
     time.sleep(0.2)
+
+    # 21 game
+    if not is_21gaming and int(time.strftime("%M")) == 30:
+        is_21gaming = True
+        start_time_21game = time.time()
+        #产生4个10以内的随机数,发送给每一个玩家
+
+    if is_21gaming:
+        if time.time() - start_time_21game >= 30.0:
+            is_21gaming = False
+            #发布结果
+
 
     # 'update' must be called in the loop to keep the game running and give
     # us up-to-date information
@@ -114,8 +131,18 @@ while True:
         if id not in connectPlayers: continue
     
         # if the player hasn't given their name yet, use this first command as their name
+        # 'help' command
+        if command == "help":
+            # send the player back the list of possible commands
+            mud.send_message(id, "Commands:")
+            mud.send_message(id, "  say <message>  - Says something out loud, e.g. 'say Hello'")
+            # mud.send_message(id,"  look           - Examines the surroundings, e.g. 'look'")
+            # mud.send_message(id,"  go <exit>      - Moves through the exit specified, e.g. 'go outside'")
+            mud.send_message(id, "  login <username> <password> - login new user ,e.g. 'login zjg 123456")
+            mud.send_message(id, "  land <username> <password> - land the user ,e.g. 'land zjg 123456'")
+
         # 'login' command
-        if command == "login":
+        elif command == "login":
             # login new user
             if params == "":
                 mud.send_message(id, "Unknown command")
@@ -161,16 +188,7 @@ while True:
                     # send each player a message to tell them about the new player
                     mud.send_message(pid, "%s entered the game" % connectPlayers[id]["user_name"])
                 # send message to the new land players
-                mud.send_message(id,"""Welcome to the game, %s. Type 'help' for a list of commands. Have fun!""" % connectPlayers[id]["user_name"])
-        # 'help' command
-        elif command == "help":
-            # send the player back the list of possible commands
-            mud.send_message(id,"Commands:")
-            mud.send_message(id,"  say <message>  - Says something out loud, e.g. 'say Hello'")
-           # mud.send_message(id,"  look           - Examines the surroundings, e.g. 'look'")
-           # mud.send_message(id,"  go <exit>      - Moves through the exit specified, e.g. 'go outside'")
-            mud.send_message(id,"  login <username> <password> - login new user ,e.g. 'login zjg 123456")
-            mud.send_message(id,"  land <username> <password> - land the user ,e.g. 'land zjg 123456'")
+                mud.send_message(id,"""Welcome to the hall, %s. Type 'help' for a list of commands.""" % connectPlayers[id]["user_name"])
 
         # 'say' command
         elif command == "chat":
@@ -184,10 +202,12 @@ while True:
         # 'save' command
         elif command == "save":
             mud.savePlayers()
+
         # 'rooms' command
         elif command == "rooms":
             mud.send_message(id,"Room List: %s" %((",").join(rooms)))
             mud.send_message(id,"You are in '%s' room now" %(connectPlayers[id]["room"]))
+
         # 'create' command
         elif command == "create":
             if params == "":
@@ -234,15 +254,18 @@ while True:
                                                                           connectPlayers[id]["room"]))
                 connectPlayers[id]["room"] = "hall"
                 mud.send_message(id,"You are in the 'hall' room")
+
         elif command == "roomchat":
             for pid, pl in connectPlayers.items():
                 # if player is in the same room and isn't the player sending the command
                 if connectPlayers[pid]["room"] == connectPlayers[id]["room"] and pid != id:
                     # send them a message telling them that the player left the room
                     mud.send_message(pid, " %s said in the room: %s" %(connectPlayers[id]["user_name"],params))
+
         elif command == "hallchat":
             for pid, pl in connectPlayers.items():
                 mud.send_message(pid,"%s said in hall: %s" %(connectPlayers[id]["user_name"],params))
+
         elif command == "talkto":
             if params == "":
                 mud.send_message(id,"No message")
@@ -257,6 +280,9 @@ while True:
                     break
             if not hasTalker:
                 mud.send_message(id,"There's no the talker '%s'" %(lisenter))
+
+        elif command == "21game":
+            pass
         else:
             # send back an 'unknown command' message
             mud.send_message(id, "Unknown command: %s" % command)
