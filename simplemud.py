@@ -210,6 +210,13 @@ while True:
                 if rooms.count(params) > 0:
                     connectPlayers[id]["room"] = params
                     mud.send_message(id,"You are in the '%s' room" %(params))
+
+                    for pid, pl in connectPlayers.items():
+                        # if player is in the same room and isn't the player sending the command
+                        if connectPlayers[pid]["room"] == connectPlayers[id]["room"] and pid != id:
+                            # send them a message telling them that the player left the room
+                            mud.send_message(pid, "%s enter the '%s' room" % (connectPlayers[id]["user_name"],
+                                                                                   connectPlayers[id]["room"]))
                 else:
                     mud.send_message(id, "There's no the room named '%s'" %(params))
 
@@ -219,8 +226,37 @@ while True:
                 mud.send_message(id, "Don't leave the 'hall' room")
             else:
                 mud.send_message(id,"You have leave the '%s' room." %(connectPlayers[id]["room"]))
+                for pid, pl in connectPlayers.items():
+                    # if player is in the same room and isn't the player sending the command
+                    if connectPlayers[pid]["room"] == connectPlayers[id]["room"] and pid != id:
+                        # send them a message telling them that the player left the room
+                        mud.send_message(pid, "%s left  the '%s' room" % (connectPlayers[id]["user_name"],
+                                                                          connectPlayers[id]["room"]))
                 connectPlayers[id]["room"] = "hall"
                 mud.send_message(id,"You are in the 'hall' room")
+        elif command == "roomchat":
+            for pid, pl in connectPlayers.items():
+                # if player is in the same room and isn't the player sending the command
+                if connectPlayers[pid]["room"] == connectPlayers[id]["room"] and pid != id:
+                    # send them a message telling them that the player left the room
+                    mud.send_message(pid, " %s said in the room: %s" %(connectPlayers[id]["user_name"],params))
+        elif command == "hallchat":
+            for pid, pl in connectPlayers.items():
+                mud.send_message(pid,"%s said in hall: %s" %(connectPlayers[id]["user_name"],params))
+        elif command == "talkto":
+            if params == "":
+                mud.send_message(id,"No message")
+            lisener,message = (params.split(' ',1) + ["",""])[0:2]
+            hasTalker = False
+            for pid, pl in connectPlayers.items():
+                # if player is in the same room and isn't the player sending the command
+                if connectPlayers[pid]["user_name"] == lisener and pid != id:
+                    # send them a message telling them that the player left the room
+                    mud.send_message(pid, " %s talk to you : %s" %(connectPlayers[id]["user_name"],message))
+                    hasTalker = True
+                    break
+            if not hasTalker:
+                mud.send_message(id,"There's no the talker '%s'" %(lisenter))
         else:
             # send back an 'unknown command' message
             mud.send_message(id, "Unknown command: %s" % command)
