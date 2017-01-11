@@ -24,16 +24,7 @@ import time
 from mudserver import MudServer
 
 # structure defining the rooms in the game. Try adding more rooms to the game!
-rooms = {
-    "Tavern": {
-        "description": "You're in a cozy tavern warmed by an open fire.",
-        "exits": { "outside": "Outside" },
-    },
-    "Outside": {
-        "description": "You're standing outside a tavern. It's raining.",
-        "exits": { "inside": "Tavern" },
-    }
-}
+rooms = ["hall"]
 
 # read players file
 def loadPlayersInformation(file_name):
@@ -88,7 +79,7 @@ while True:
         # Try adding more player stats - level, gold, inventory, etc
         connectPlayers[id] = {
             "user_name": None,
-            "room": "Tavern",
+            "room": "hall",
             "lasting_time":0,
             "start_time":0,
             "is_logined":False,
@@ -150,6 +141,9 @@ while True:
             if params == "":
                 mud.send_message(id, "Unknown command")
                 continue
+            if params.count(' ') == 0:
+                mud.send_message(id, "Wrong Input")
+                continue
             user_name,pass_word = params.split(" ")[0:2]
             if not mud.hasLoged(user_name):
                 mud.send_message(id, "There's not user: %s, please login the new user" % (user_name))
@@ -190,6 +184,43 @@ while True:
         # 'save' command
         elif command == "save":
             mud.savePlayers()
+        # 'rooms' command
+        elif command == "rooms":
+            mud.send_message(id,"Room List: %s" %((",").join(rooms)))
+            mud.send_message(id,"You are in '%s' room now" %(connectPlayers[id]["room"]))
+        # 'create' command
+        elif command == "create":
+            if params == "":
+                mud.send_message(id, "Please input the room name.")
+            else:
+                params.lower()
+                if rooms.count(params) > 0:
+                    mud.send_message(id, "The room name is used by other")
+                    continue
+                rooms.append(params)
+                mud.send_message(id, "Room List: %s" % ((",").join(rooms)))
+                mud.send_message(id, "You are in '%s' room now" % (connectPlayers[id]["room"]))
+
+        # 'go' command
+        elif command == "go":
+            if params == "":
+                mud.send_message(id, "Please input the room name.")
+            else:
+                params.lower()
+                if rooms.count(params) > 0:
+                    connectPlayers[id]["room"] = params
+                    mud.send_message(id,"You are in the '%s' room" %(params))
+                else:
+                    mud.send_message(id, "There's no the room named '%s'" %(params))
+
+        # 'exit' command
+        elif command == "exit":
+            if connectPlayers[id]["room"] == "hall":
+                mud.send_message(id, "Don't leave the 'hall' room")
+            else:
+                mud.send_message(id,"You have leave the '%s' room." %(connectPlayers[id]["room"]))
+                connectPlayers[id]["room"] = "hall"
+                mud.send_message(id,"You are in the 'hall' room")
         else:
             # send back an 'unknown command' message
             mud.send_message(id, "Unknown command: %s" % command)
