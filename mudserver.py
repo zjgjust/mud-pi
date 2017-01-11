@@ -1,4 +1,5 @@
-"""    
+# -*- coding: utf-8 -*-
+"""
 Basic MUD server module for creating text-based Multi-User Dungeon (MUD) games.
 
 Contains one class, MudServer, which can be instantiated to start a server running
@@ -46,6 +47,8 @@ class MudServer(object):
     _EVENT_NEW_PLAYER = 1
     _EVENT_PLAYER_LEFT = 2
     _EVENT_COMMAND = 3
+    _EVENT_NEW_PLAYER_LOGIN = 4
+    _EVENT_NEW_PLAYER_LAND = 5
     
     # Different states we can be in while reading data from client
     # See _process_sent_data function
@@ -80,7 +83,8 @@ class MudServer(object):
         self._nextid = 0
         self._events = []
         self._new_events = []
-        
+        self._loged_player = {}
+
         # create a new tcp socket which will be used to listen for new clients
         self._listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
@@ -100,6 +104,48 @@ class MudServer(object):
         # start listening for connections on the socket
         self._listen_socket.listen(1)
 
+    def setLogedPlayers(self,players):
+        """
+        服务启动时调用一次
+        """
+        self._loged_player = players
+
+    def addLogedPlayers(self,player):
+        """
+        新的用户注册时调用
+        :param player:
+        :return:
+        """
+        if self._loged_player.has_key(player["user"]):
+            return
+        self._loged_player[player["user"]] = player
+
+    def setLogedPlayerInfo(self,key,kkey,value):
+        #设置注册过的用户的值,这个主要在用户登录的时候设置"is_online"位
+        if self._loged_player.has_key(key):
+            return
+        self._loged_player[key][kkey] = value
+        if kkey == "is_online":
+            if value == True:
+                self._loged_player[key]["start_time"] = time.time()
+            else:
+                self._loged_player[key]["lasting_time"] = time.time() - self._loged_player[key]["start_time"]
+
+    def _savePlayers(self):
+        # 保存注册过的用户信息,主要包括用户名,密码,在线时间
+        try:
+            fp = open('playerInfo.txt','w')
+        except IOError, e:
+            print 'could not open file:', e
+        for key,value in self._loged_player.items():
+            if value["is_online"] == True:
+                value["lasting_time"] = time.time() - value["start_time"]
+            line = value["name"] + " " + value["pass_word"] + " " + str(value["lasting_time"]) + "\n"
+            fp.write(line)
+
+
+    def __delete__(self, instance):
+        self.savePlayers()
 
     def update(self):
         """    
@@ -144,7 +190,8 @@ class MudServer(object):
         # go through all the events in the main list
         for ev in self._events:
             # if the event is a player disconnect occurence, add the info to the list
-            if ev[0] == self._EVENT_PLAYER_LEFT: retval.append(ev[1])
+            if ev[0] == self._EVENT_PLAYER_LEFT:
+                retval.append(ev[1])
         # return the info list
         return retval
 
@@ -160,7 +207,8 @@ class MudServer(object):
         # go through all the events in the main list
         for ev in self._events:
             # if the event is a command occurence, add the info to the list
-            if ev[0] == self._EVENT_COMMAND: retval.append((ev[1],ev[2],ev[3]))
+            if ev[0] == self._EVENT_COMMAND:
+                retval.append((ev[1],ev[2],ev[3]))
         # return the info list
         return retval
 
@@ -175,7 +223,11 @@ class MudServer(object):
         # message on its own line
         self._attempt_send(to,message+"\n\r")
 
-        
+    def send_connect_message(self,to):
+        self.send_message(to, "You can login or land:")
+        self.send_message(to, "  login <username> <password> - login new user ,e.g. 'login zjg 123456")
+        self.send_message(to, "  land <username> <password> - land the user ,e.g. 'land zjg 123456'")
+
     def shutdown(self):
         """    
         Closes down the server, disconnecting all clients and closing the 

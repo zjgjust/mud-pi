@@ -35,11 +35,37 @@ rooms = {
     }
 }
 
+# read players file
+def loadPlayersInformation(file_name):
+    fp = open(file_name, 'r')
+    log_players = {}
+    while 1:
+        line = fp.readline()
+        if not line:
+            break
+        user_name,pass_word,lasting_time = line.split(" ")
+        user_name.strip()
+        pass_word.strip()
+        lasting_time.strip()
+        log_players[user_name] = {
+            "user_name":user_name,
+            "pass_word":pass_word,
+            "lasting_time":float(lasting_time),
+            "is_online":False,
+            "start_time":0
+        }
+    return log_players
+
 # stores the players in the game
+
 players = {}
+# stores the logined players in the game
+logPlayers = {}
+logPlayers = loadPlayersInformation('playerInfo.txt')
 
 # start the server
 mud = MudServer()
+mud.setLogedPlayers(logPlayers)
 
 # main game loop. We loop forever (i.e. until the program is terminated)
 while True:
@@ -64,11 +90,13 @@ while True:
         players[id] = { 
             "name": None,
             "room": "Tavern",
+            "lasting_time":0,
+            "start_time":0,
+            "is_logined":False,
+            "pass_word":""
         }
-        
         # send the new player a prompt for their name
-        mud.send_message(id,"What is your name?")
-        
+        mud.send_connect_message(id)
     
     # go through any recently disconnected players    
     for id in mud.get_disconnected_players():
@@ -94,24 +122,39 @@ while True:
         if id not in players: continue
     
         # if the player hasn't given their name yet, use this first command as their name
-        if players[id]["name"] is None:
-            
-            players[id]["name"] = command
-            
-            # go through all the players in the game
-            for pid,pl in players.items():
-                # send each player a message to tell them about the new player
-                mud.send_message(pid,"%s entered the game" % players[id]["name"])
-            
-            # send the new player a welcome message
-            mud.send_message(id,"Welcome to the game, %s. Type 'help' for a list of commands. Have fun!" % players[id]["name"])
-            
-            # send the new player the description of their current room
-            mud.send_message(id,rooms[players[id]["room"]]["description"])
-                
-        # each of the possible commands is handled below. Try adding new commands
-        # to the game!
-    
+        # 'login' command
+        if command == "login":
+            # login new user
+            players[id]["is_logined"] = True
+            user_name,pass_word = params.split(" ")
+            players[id]["name"] = user_name
+            players[id]["pass_word"] = pass_word
+            player = {"user_name":user_name,
+                      "pass_word":pass_word,
+                      "lasting_time":0,
+                      "is_online":False,
+                      "start_time":0}
+            mud.addLogedPlayers(player)
+            mud.send_message(id,"you have logined successfully with name: %s and password: %s"
+                             % (players[id]["name"],players[id]["pass_word"]))
+        # 'land' command
+        elif command == "land":
+            # land user
+            user_name,pass_word = params.split(" ")[0:2]
+            if players[id]["name"] != user_name:
+                mud.send_message(id,"There's not user: %s, please login the new user" %(user_name))
+            elif players[id]["pass_word"] != pass_word:
+                mud.send_message(id,"The password is wrong")
+            else:
+                players[id]["start_time"] = time.time()
+                mud.setLogedPlayerInfo(players[id]["user_name"],"is_online",True)
+                # send message to all players
+                for pid, pl in players.items():
+                    # send each player a message to tell them about the new player
+                    mud.send_message(pid, "%s entered the game" % players[id]["name"])
+                # send message to the new land players
+                mud.send_message(id,"Welcome to the game, %s. Type 'help' for a list of commands. Have fun!" % players[id]["name"])
+
         # 'help' command
         elif command == "help":
         
@@ -120,9 +163,11 @@ while True:
             mud.send_message(id,"  say <message>  - Says something out loud, e.g. 'say Hello'")
             mud.send_message(id,"  look           - Examines the surroundings, e.g. 'look'")
             mud.send_message(id,"  go <exit>      - Moves through the exit specified, e.g. 'go outside'")
-            
+            mud.send_message(id,"  login <username> <password> - login new user ,e.g. 'login zjg 123456")
+            mud.send_message(id,"  land <username> <password> - land the user ,e.g. 'land zjg 123456'")
+
         # 'say' command
-        elif command == "say":
+        elif command == "chat":
             
             # go through every player in the game
             for pid,pl in players.items():
@@ -153,7 +198,7 @@ while True:
             
             # send player a message containing the list of exits from this room
             mud.send_message(id, "Exits are: %s" % ", ".join(rm["exits"]))
-                        
+
         # 'go' command
         elif command == "go":
             
