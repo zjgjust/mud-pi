@@ -89,7 +89,7 @@ class MudManager(object):
             time.sleep(0.2)
 
             # 21 game
-            if not self.gameManager.is_21gaming and int(time.strftime("%M"))  == 30:
+            if not self.gameManager.is_21gaming and int(time.strftime("%M"))  == 15:
                 self.gameManager.is_21gaming = True
                 self.gameManager.start_time_21game = time.time()
                 for i in range(0, 4):
@@ -109,7 +109,7 @@ class MudManager(object):
                     most_id = -1
                     opt_id = -1
                     if len(self.gameManager.answers_21game) == 0:
-                        self.sendMessageToAll("It's the time. No one put an answer.")
+                        self.sendMessageToAll("The 21game is over. No one put an answer.")
                     else:
                         for pid, value in self.gameManager.answers_21game.items():
                             if value["value"] == 21:
@@ -132,9 +132,9 @@ class MudManager(object):
                     else:
                         last_id = most_id
                     if last_id == -1:
-                        self.sendMessageToAll("No one put the answer.")
+                        self.sendMessageToAll("The 21game is over.No one put the answer.")
                     else:
-                        self.sendMessageToAll("21 game winner is: %s" % self.connectPlayers[last_id]["user_name"])
+                        self.sendMessageToAll("The 21game winner is: %s" % self.connectPlayers[last_id]["user_name"])
                     self.gameManager.answers_21game = {}
 
             # 'update' must be called in the loop to keep the game running and give
