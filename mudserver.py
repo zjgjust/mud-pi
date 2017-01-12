@@ -448,5 +448,4 @@ class MudServer(object):
                     
         # return the contents of 'message' which is either a string or None
         return message
-        
-        
+
