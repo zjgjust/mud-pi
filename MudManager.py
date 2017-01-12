@@ -131,7 +131,10 @@ class MudManager(object):
                         last_id = opt_id
                     else:
                         last_id = most_id
-                    self.sendMessageToAll("21 game winner is: %s" % self.connectPlayers[last_id]["user_name"])
+                    if last_id == -1:
+                        self.sendMessageToAll("No one put the answer.")
+                    else:
+                        self.sendMessageToAll("21 game winner is: %s" % self.connectPlayers[last_id]["user_name"])
                     self.gameManager.answers_21game = {}
 
             # 'update' must be called in the loop to keep the game running and give
@@ -165,10 +168,10 @@ class MudManager(object):
                 if id not in self.connectPlayers: continue
 
                 # go through all the players in the game
-                self.sendMessageToAll("%s quit the game." % connectPlayers[id]["user_name"])
+                self.sendMessageToAll("%s quit the game." % self.connectPlayers[id]["user_name"])
 
                 # log user message
-                self.mud.offLogedPlayer(connectPlayers[id]["user_name"])
+                self.mud.offLogedPlayer(self.connectPlayers[id]["user_name"])
 
                 # remove the player's entry in the player dictionary
                 del (self.connectPlayers[id])
