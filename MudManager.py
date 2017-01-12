@@ -151,6 +151,7 @@ class MudManager(object):
                     "lasting_time": 0,
                     "start_time": 0,
                     "is_logined": False,
+                    "is_online": False,
                     "pass_word": "",
                 }
                 # send the new player a prompt for their name
@@ -224,6 +225,7 @@ class MudManager(object):
                         self.connectPlayers[id]["user_name"] = user_name
                         self.connectPlayers[id]["pass_word"] = pass_word
                         self.connectPlayers[id]["start_time"] = current_time
+                        self.connectPlayers[id]["is_online"] = True
                         self.mud.setLogedPlayerInfo(self.connectPlayers[id]["user_name"], "is_online", True)
                         self.mud.setLogedPlayerInfo(self.connectPlayers[id]["user_name"], "start_time", current_time)
 
@@ -242,6 +244,9 @@ class MudManager(object):
 
                 # 'create' command
                 elif command == "create":
+                    if self.connectPlayers[id]["is_online"] == False:
+                        self.mud.send_message(id,"Please land in firstly.")
+                        continue
                     if params == "":
                         self.mud.send_message(id, "Please input the room name.")
                     else:
@@ -255,6 +260,9 @@ class MudManager(object):
 
                 # 'go' command
                 elif command == "go":
+                    if self.connectPlayers[id]["is_online"] == False:
+                        self.mud.send_message(id,"Please land in firstly.")
+                        continue
                     if params == "":
                         self.mud.send_message(id, "Please input the room name.")
                     else:
@@ -270,6 +278,9 @@ class MudManager(object):
 
                 # 'exit' command
                 elif command == "exit":
+                    if self.connectPlayers[id]["is_online"] == False:
+                        self.mud.send_message(id,"Please land in firstly.")
+                        continue
                     if self.connectPlayers[id]["room"] == "hall":
                         self.mud.send_message(id, "Don't leave the 'hall' room")
                     else:
@@ -281,16 +292,25 @@ class MudManager(object):
                         self.mud.send_message(id, "You are in the 'hall' room")
 
                 elif command == "roomchat":
+                    if self.connectPlayers[id]["is_online"] == False:
+                        self.mud.send_message(id,"Please land in firstly.")
+                        continue
                     message = " %s said in the %s: %s" % (self.connectPlayers[id]["user_name"],
                                                                  self.connectPlayers[id]["room"],
                                                                  params)
                     self.sendMessageToRoom(self.connectPlayers[id]["room"], message)
 
                 elif command == "hallchat" or command == "chat":
+                    if self.connectPlayers[id]["is_online"] == False:
+                        self.mud.send_message(id,"Please land in firstly.")
+                        continue
                     message = "%s said in hall: %s" % (self.connectPlayers[id]["user_name"], params)
                     self.sendMessageToAll(message)
 
                 elif command == "talkto":
+                    if self.connectPlayers[id]["is_online"] == False:
+                        self.mud.send_message(id,"Please land in firstly.")
+                        continue
                     if params == "":
                         self.mud.send_message(id, "No message")
                     lisener, message = (params.split(' ', 1) + ["", ""])[0:2]
@@ -307,6 +327,9 @@ class MudManager(object):
                         self.mud.send_message(id, "There's no the talker '%s'" % (lisenter))
 
                 elif command == "21game":
+                    if self.connectPlayers[id]["is_online"] == False:
+                        self.mud.send_message(id,"Please land in firstly.")
+                        continue
                     if not self.gameManager.is_21gaming:
                         self.mud.send_message(id,"Time out.")
                         continue

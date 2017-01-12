@@ -233,10 +233,10 @@ class MudServer(object):
         self._attempt_send(to,message+"\n\r")
 
     def send_connect_message(self,to):
-        self.send_message(to, "You can login or land:")
+        self.send_message(to, "You can login , land and help:")
         self.send_message(to, "  login <username> <password> - login new user ,e.g. 'login zjg 123456")
         self.send_message(to, "  land <username> <password> - land the user ,e.g. 'land zjg 123456'")
-
+        self.send_message(to, "  help - get the help message ,e.g. 'help'")
     def shutdown(self):
         """    
         Closes down the server, disconnecting all clients and closing the 
