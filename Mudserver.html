@@ -1,0 +1,94 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module Mudserver</title>
+<meta charset="utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>Mudserver</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:///D:/users/admin/desktop/mud-pi/mudserver.py">d:\users\admin\desktop\mud-pi\mudserver.py</a></font></td></tr></table>
+    <p><tt>author:&nbsp;Zhang&nbsp;Jianguo&nbsp;-&nbsp;1401213887@pku.edu.cn</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="select.html">select</a><br>
+</td><td width="25%" valign=top><a href="socket.html">socket</a><br>
+</td><td width="25%" valign=top><a href="sys.html">sys</a><br>
+</td><td width="25%" valign=top><a href="time.html">time</a><br>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="__builtin__.html#object">__builtin__.object</a>
+</font></dt><dd>
+<dl>
+<dt><font face="helvetica, arial"><a href="Mudserver.html#MudServer">MudServer</a>
+</font></dt></dl>
+</dd>
+</dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="MudServer">class <strong>MudServer</strong></a>(<a href="__builtin__.html#object">__builtin__.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>一个Mud服务器类，实例化之后可以监听Telnet连接，并向客户端发送消息和处理从客户端发送过来的指令<br>
+update方法是在主循环里要调用的，然后，就开始工作了<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="MudServer-__delete__"><strong>__delete__</strong></a>(self, instance)</dt><dd><tt>析构函数，析构时，保存用户信息</tt></dd></dl>
+
+<dl><dt><a name="MudServer-__init__"><strong>__init__</strong></a>(self)</dt><dd><tt>创建Mud服务器，监听连接</tt></dd></dl>
+
+<dl><dt><a name="MudServer-addLogedPlayers"><strong>addLogedPlayers</strong></a>(self, player)</dt><dd><tt>新的用户注册时调用，记录到server中</tt></dd></dl>
+
+<dl><dt><a name="MudServer-getLogedPlayersInfo"><strong>getLogedPlayersInfo</strong></a>(self, key, kkey)</dt><dd><tt>获取注册过的用户的信息，包括用户名，密码，在线时间（秒）</tt></dd></dl>
+
+<dl><dt><a name="MudServer-get_commands"><strong>get_commands</strong></a>(self)</dt><dd><tt>获取用户指令消息，ev[1]&nbsp;:&nbsp;用户ID，&nbsp;ev[2]&nbsp;：用户指令command,&nbsp;ev[3]&nbsp;:&nbsp;指令参数parameters</tt></dd></dl>
+
+<dl><dt><a name="MudServer-get_disconnected_players"><strong>get_disconnected_players</strong></a>(self)</dt><dd><tt>获得用户断开连接的消息</tt></dd></dl>
+
+<dl><dt><a name="MudServer-get_new_players"><strong>get_new_players</strong></a>(self)</dt><dd><tt>获得新用户连接消息</tt></dd></dl>
+
+<dl><dt><a name="MudServer-hasLoged"><strong>hasLoged</strong></a>(self, user_name)</dt><dd><tt>判断用户名为user_name的用户是否注册过</tt></dd></dl>
+
+<dl><dt><a name="MudServer-offLogedPlayer"><strong>offLogedPlayer</strong></a>(self, user_name)</dt><dd><tt>登陆过用户下线时使用，记录在线时长</tt></dd></dl>
+
+<dl><dt><a name="MudServer-savePlayers"><strong>savePlayers</strong></a>(self)</dt><dd><tt>保存所有注册过的用户信息,主要包括用户名,密码,在线时间</tt></dd></dl>
+
+<dl><dt><a name="MudServer-send_connect_message"><strong>send_connect_message</strong></a>(self, to)</dt><dd><tt>新用户连接成功时，发送提示信息</tt></dd></dl>
+
+<dl><dt><a name="MudServer-send_message"><strong>send_message</strong></a>(self, to, message)</dt><dd><tt>向ID为to的用户发送消息</tt></dd></dl>
+
+<dl><dt><a name="MudServer-setLogedPlayerInfo"><strong>setLogedPlayerInfo</strong></a>(self, key, kkey, value)</dt><dd><tt>设置注册过的用户的值,这个主要在用户登录的时候设置"is_online"位</tt></dd></dl>
+
+<dl><dt><a name="MudServer-setLogedPlayers"><strong>setLogedPlayers</strong></a>(self, players)</dt><dd><tt>当server启动的时候，调用一次该方法，记录从存盘读取的注册过的用户信息</tt></dd></dl>
+
+<dl><dt><a name="MudServer-shutdown"><strong>shutdown</strong></a>(self)</dt><dd><tt>关闭服务器</tt></dd></dl>
+
+<dl><dt><a name="MudServer-update"><strong>update</strong></a>(self)</dt><dd><tt>监听新用户连接，用户断开连接和用户消息。<br>
+这个方法必须在'get_new_players',&nbsp;'get_disconnected_players'&nbsp;and&nbsp;'get_commands'方法之前调用<br>
+请将该方法放在一个循环里</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table></td></tr></table>
+</body></html>

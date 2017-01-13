@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Basic MUD server module for creating text-based Multi-User Dungeon (MUD) games.
-
-Contains one class, MudServer, which can be instantiated to start a server running
-then used to send and receive messages from players.
-
-author: Mark Frimston - mfrimston@gmail.com
+author: Zhang Jianguo - 1401213887@pku.edu.cn
 """
 
 
@@ -16,39 +11,35 @@ import sys
 
 
 class MudServer(object):    
-    """    
-    A basic server for text-based Multi-User Dungeon (MUD) games. 
-    
-    Once created, the server will listen for players connecting using Telnet. 
-    Messages can then be sent to and from multiple connected players.
-    
-    The 'update' method should be called in a loop to keep the server running.
+    """
+    一个Mud服务器类，实例化之后可以监听Telnet连接，并向客户端发送消息和处理从客户端发送过来的指令
+    update方法是在主循环里要调用的，然后，就开始工作了
     """
 
-    # An inner class which is instantiated for each connected client to store
-    # info about them
+    #嵌套类，存储连接的用户的信息
     
     class _Client(object):
-        "Holds information about a connected player"
+        """
+        存储连接的用户的信息
+        """
         
-        socket = None   # the socket object used to communicate with this client
-        address = ""    # the ip address of this client
-        buffer = ""     # holds data send from the client until a full message is received
-        lastcheck = 0   # the last time we checked if the client was still connected
+        socket = None   # 连接套接字
+        address = ""    # IP address
+        buffer = ""     # 用户发来的信息
+        lastcheck = 0   # 检查用户是否连接的标记，记录最后一次检查通过的时间
         
         def __init__(self,socket,address,buffer,lastcheck):
+
             self.socket = socket
             self.address = address
             self.buffer = buffer
             self.lastcheck = lastcheck
             
 
-    # Used to store different types of occurences            
-    _EVENT_NEW_PLAYER = 1
-    _EVENT_PLAYER_LEFT = 2
-    _EVENT_COMMAND = 3
-    _EVENT_NEW_PLAYER_LOGIN = 4
-    _EVENT_NEW_PLAYER_LAND = 5
+    #消息状态
+    _EVENT_NEW_PLAYER = 1   #新用户连接
+    _EVENT_PLAYER_LEFT = 2  #用户离开
+    _EVENT_COMMAND = 3      #用户指令
     
     # Different states we can be in while reading data from client
     # See _process_sent_data function
@@ -56,8 +47,7 @@ class MudServer(object):
     _READ_STATE_COMMAND = 2
     _READ_STATE_SUBNEG = 3
     
-    # Command codes used by Telnet protocol
-    # See _process_sent_data function
+    # Telnet使用的特殊指令字符
     _TN_INTERPRET_AS_COMMAND = 255
     _TN_ARE_YOU_THERE = 246
     _TN_WILL = 251
@@ -67,16 +57,16 @@ class MudServer(object):
     _TN_SUBNEGOTIATION_START = 250
     _TN_SUBNEGOTIATION_END = 240
 
-    _listen_socket = None  # socket used to listen for new clients
-    _clients = {}          # holds info on clients. Maps client id to _Client object
-    _nextid = 0            # counter for assigning each client a new id
-    _events = []           # list of occurences waiting to be handled by the code
-    _new_events = []       # list of newly-added occurences
-    
+    _listen_socket = None  # 监听套接字
+    _clients = {}          # 连接用户字典 key: id , value : _Client实例
+    _nextid = 0            # 用户id,新用户来加一
+    _events = []           # 事件列表
+    _new_events = []       # swap buffer
+    _loged_player = {}     # { “zjg" : {"user_name" : "zjg", "pass_word":123, "lasting_time" : 3000}}, key : str, value : {}
     
     def __init__(self):
         """    
-        Constructs the MudServer object and starts listening for new players.
+        创建Mud服务器，监听连接
         """
         
         self._clients = {}
@@ -85,53 +75,56 @@ class MudServer(object):
         self._new_events = []
         self._loged_player = {}
 
-        # create a new tcp socket which will be used to listen for new clients
+        # 监听套接字创建
         self._listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
-        # set a special option on the socket which allows the port to be immediately
-        # without having to wait
+
         self._listen_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR, 1)
-        
-        # bind the socket to an ip address and port. Port 23 is the standard telnet port
-        # which telnet clients will use. Address 0.0.0.0 means that we will bind to all
-        # of the available network interfaces
+
+        # 监听套接字bind,监听任意IP，端口23
         self._listen_socket.bind(("0.0.0.0",23))
-        
-        # set to non-blocking mode. This means that when we call 'accept', it will 
-        # return immediately without waiting for a connection
+
+        # 非阻塞
         self._listen_socket.setblocking(False)
         
-        # start listening for connections on the socket
+        # listen，最大监听数1
         self._listen_socket.listen(1)
 
     def setLogedPlayers(self,players):
         """
-        服务启动时调用一次
+        当server启动的时候，调用一次该方法，记录从存盘读取的注册过的用户信息
         """
         self._loged_player = players
+
     def getLogedPlayersInfo(self,key,kkey):
-            return self._loged_player[key][kkey]
+        """
+        获取注册过的用户的信息，包括用户名，密码，在线时间（秒）
+        """
+        return self._loged_player[key][kkey]
 
     def addLogedPlayers(self,player):
         """
-        新的用户注册时调用
-        :param player:
-        :return:
+        新的用户注册时调用，记录到server中
         """
         if self._loged_player.has_key(player["user_name"]):
             return
         self._loged_player[player["user_name"]] = player
 
     def setLogedPlayerInfo(self,key,kkey,value):
-        #设置注册过的用户的值,这个主要在用户登录的时候设置"is_online"位
-        if self._loged_player.has_key(key):
+        """
+        设置注册过的用户的值,这个主要在用户登录的时候设置"is_online"位
+        """
+        if not self._loged_player.has_key(key):
             return
+
         self._loged_player[key][kkey] = value
         if kkey == "is_online":
             if value == False:
-                self._loged_player[key]["lasting_time"] = time.time() - self._loged_player[key]["start_time"]
+               self.offLogedPlayer(self._loged_player[key]["user_name"])
 
     def offLogedPlayer(self,user_name):
+        """
+        登陆过用户下线时使用，记录在线时长
+        """
         if self._loged_player.has_key(user_name):
             self._loged_player[user_name]["is_online"] = False
             self._loged_player[user_name]["lasting_time"] = self._loged_player[user_name]["lasting_time"] +\
@@ -139,7 +132,9 @@ class MudServer(object):
             self.savePlayers()
 
     def savePlayers(self):
-        # 保存注册过的用户信息,主要包括用户名,密码,在线时间
+        """
+        保存所有注册过的用户信息,主要包括用户名,密码,在线时间
+        """
         try:
             fp = open('playerInfo.txt','w')
         except IOError, e:
@@ -151,235 +146,186 @@ class MudServer(object):
             fp.write(line_info)
 
     def hasLoged(self,user_name):
+        """
+        判断用户名为user_name的用户是否注册过
+        """
         return self._loged_player.has_key(user_name)
 
     def __delete__(self, instance):
+        """
+        析构函数，析构时，保存用户信息
+        """
         self.savePlayers()
 
     def update(self):
-        """    
-        Checks for new players, disconnected players, and new messages sent from players.
-        This method must be called before up-to-date info can be obtained from the 
-        'get_new_players', 'get_disconnected_players' and 'get_commands' methods. 
-        It should be called in a loop to keep the game running.
         """
-                
-        # check for new stuff
+        监听新用户连接，用户断开连接和用户消息。
+        这个方法必须在'get_new_players', 'get_disconnected_players' and 'get_commands'方法之前调用
+        请将该方法放在一个循环里
+        """
+
         self._check_for_new_connections()
         self._check_for_disconnected()
         self._check_for_messages()
         
-        # move the new events into the main events list so that they can be obtained
-        # with 'get_new_players', 'get_disconnected_players' and 'get_commands'. The
-        # previous events are discarded
+        #保存消息，swap buffer
         self._events = list(self._new_events)
         self._new_events = []
 
         
     def get_new_players(self):
         """    
-        Returns a list containing info on any new players that have entered the game 
-        since the last call to 'update'. Each item in the list is a player id number.
+        获得新用户连接消息
         """
         retval = []
-        # go through all the events in the main list
+
         for ev in self._events:
-            # if the event is a new player occurence, add the info to the list
             if ev[0] == self._EVENT_NEW_PLAYER: retval.append(ev[1])
-        # return the info list
+
         return retval
 
         
     def get_disconnected_players(self):
         """    
-        Returns a list containing info on any players that have left the game since 
-        the last call to 'update'. Each item in the list is a player id number.
+        获得用户断开连接的消息
         """
         retval = []
-        # go through all the events in the main list
         for ev in self._events:
-            # if the event is a player disconnect occurence, add the info to the list
             if ev[0] == self._EVENT_PLAYER_LEFT:
                 retval.append(ev[1])
-        # return the info list
+
         return retval
 
     
     def get_commands(self):
         """    
-        Returns a list containing any commands sent from players since the last call
-        to 'update'. Each item in the list is a 3-tuple containing the id number of
-        the sending player, a string containing the command (i.e. the first word of 
-        what they typed), and another string containing the text after the command
+        获取用户指令消息，ev[1] : 用户ID， ev[2] ：用户指令command, ev[3] : 指令参数parameters
         """
         retval = []
-        # go through all the events in the main list
+
         for ev in self._events:
-            # if the event is a command occurence, add the info to the list
             if ev[0] == self._EVENT_COMMAND:
                 retval.append((ev[1],ev[2],ev[3]))
-        # return the info list
+
         return retval
 
 
     def send_message(self,to,message):
         """    
-        Sends the text in the 'message' parameter to the player with the id number 
-        given in the 'to' parameter. The text will be printed out in the player's
-        terminal.
+        向ID为to的用户发送消息
         """
-        # we make sure to put a newline on the end so the client receives the
-        # message on its own line
         self._attempt_send(to,message+"\n\r")
 
     def send_connect_message(self,to):
+        """
+        新用户连接成功时，发送提示信息
+        """
         self.send_message(to, "You can login , land and help:")
         self.send_message(to, "  login <username> <password> - login new user ,e.g. 'login zjg 123456")
         self.send_message(to, "  land <username> <password> - land the user ,e.g. 'land zjg 123456'")
         self.send_message(to, "  help - get the help message ,e.g. 'help'")
+
     def shutdown(self):
         """    
-        Closes down the server, disconnecting all clients and closing the 
-        listen socket.
+        关闭服务器
         """
-        # for each client
+        self.savePlayers();
         for cl in self._clients.values():
-            # close the socket, disconnecting the client
             cl.socket.shutdown()
             cl.socket.close()
-        # stop listening for new clients
         self._listen_socket.close()
 
     
     def _attempt_send(self,clid,data):
-        # python 2/3 compatability fix - convert non-unicode string to unicode
+        """
+        发送消息，Unicode转码操作，保证兼容性
+        """
         if sys.version < '3' and type(data)!=unicode: data = unicode(data,"latin1")
         try:
-            # look up the client in the client map and use 'sendall' to send
-            # the message string on the socket. 'sendall' ensures that all of 
-            # the data is sent in one go
             self._clients[clid].socket.sendall(bytearray(data,"latin1"))
-        # KeyError will be raised if there is no client with the given id in 
-        # the map
+
         except KeyError: pass
-        # If there is a connection problem with the client (e.g. they have
-        # disconnected) a socket error will be raised
+
         except socket.error:
             self._handle_disconnect(clid)
 
     
     def _check_for_new_connections(self):
-    
-        # 'select' is used to check whether there is data waiting to be read
-        # from the socket. We pass in 3 lists of sockets, the first being those 
-        # to check for readability. It returns 3 lists, the first being 
-        # the sockets that are readable. The last parameter is how long to wait - 
-        # we pass in 0 so that it returns immediately without waiting
+        """
+        检测新用户连接，使用select
+        """
         rlist,wlist,xlist = select.select([self._listen_socket],[],[],0)
-        
-        # if the socket wasn't in the readable list, there's no data available,
-        # meaning no clients waiting to connect, and so we can exit the method here
+
         if self._listen_socket not in rlist: return
-        
-        # 'accept' returns a new socket and address info which can be used to 
-        # communicate with the new client
+
         joined_socket,addr = self._listen_socket.accept()
-        
-        # set non-blocking mode on the new socket. This means that 'send' and 
-        # 'recv' will return immediately without waiting
+
         joined_socket.setblocking(False)
-        
-        # construct a new _Client object to hold info about the newly connected
-        # client. Use 'nextid' as the new client's id number
+
         self._clients[self._nextid] = MudServer._Client(joined_socket,addr[0],"",time.time())
 
-        # add a new player occurence to the new events list with the player's id 
-        # number
         self._new_events.append((self._EVENT_NEW_PLAYER,self._nextid))
-        
-        # add 1 to 'nextid' so that the next client to connect will get a unique 
-        # id number
+
         self._nextid += 1
 
 
     def _check_for_disconnected(self):
     
-        # go through all the clients 
+        """
+        检测断开连接的用户
+        """
         for id,cl in list(self._clients.items()):
-        
-            # if we last checked the client less than 5 seconds ago, skip this 
-            # client and move on to the next one
+
             if time.time() - cl.lastcheck < 5.0: continue
-            
-            # send the client an invisible character. It doesn't actually matter what we send, 
-            # we're really just checking that data can still be written to the socket. If it can't, 
-            # an error will be raised and we'll know that the client has disconnected.
+
             self._attempt_send(id,"\x00")
-            
-            # update the last check time
+
             cl.lastcheck = time.time()
         
                 
     def _check_for_messages(self):
     
-        # go through all the clients
+        """
+        检测用户发来的消息
+        """
         for id,cl in list(self._clients.items()):
-        
-            # we use 'select' to test whether there is data waiting to be read from 
-            # the client socket. The function takes 3 lists of sockets, the first being
-            # those to test for readability. It returns 3 list of sockets, the first being
-            # those that are actually readable.
+
             rlist,wlist,xlist = select.select([cl.socket],[],[],0)
-            
-            # if the client socket wasn't in the readable list, there is no new data from
-            # the client - we can skip it and move on to the next one 
+
             if cl.socket not in rlist: continue
                         
             try:
-                # read data from the socket, using a max length of 4096
                 data = cl.socket.recv(4096).decode("latin1")             
-                
-                # process the data, stripping out any special Telnet commands
+
                 message = self._process_sent_data(cl,data)
-                
-                # if there was a message in the data
+
                 if message:
-                
-                    # remove any spaces, tabs etc from the start and end of the message
+
                     message = message.strip()
-                    
-                    # separate the message into the command (the first word) and
-                    # its parameters (the rest of the message)
+
                     command,params = (message.split(" ",1)+["",""])[:2]
-                    
-                    # add a command occurence to the new events list with the 
-                    # player's id number, the command and its parameters
+
                     self._new_events.append((self._EVENT_COMMAND,id,command.lower(),params))
-                        
-            # if there is a problem reading from the socket (e.g. the client has 
-            # disconnected) a socket error will be raised
+
             except socket.error:
                 self._handle_disconnect(id)
         
                 
     def _handle_disconnect(self,clid):
-        
-        # remove the client from the clients map
+        """
+        处理连接错误的用户，即断开连接用户
+        """
+
         del(self._clients[clid])
-        
-        # add a 'player left' occurence to the new events list, with the player's 
-        # id number
+
         self._new_events.append((self._EVENT_PLAYER_LEFT,clid))
         
                 
     def _process_sent_data(self,client,data):
     
-        # the Telnet protocol allows special command codes to be inserted into 
-        # messages. For our very simple server we don't need to response to any
-        # of these codes, but we must at least detect and skip over them so that 
-        # we don't interpret them as text data.
-        # More info on the Telnet protocol can be found here: 
-        # http://pcmicro.com/netfoss/telnet.html
+        """
+        处理接受到的消息，主要是干掉Telnet协议的特殊指令
+        """
     
         # start with no message and in the normal state
         message = None

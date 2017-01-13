@@ -1,7 +1,5 @@
+# -*- coding: utf-8 -*-
 """
-A simple Multi-User Dungeon (MUD) game. Players can talk to each other, examine
-their surroundings and move between rooms.
-
 author: Zhang Jianguo - 1401213887@pku.edu.cn
 """
 
@@ -11,8 +9,14 @@ import random
 from Mudserver import MudServer
 
 class MudManager(object):
+    """
+    Mud 管理类，主要负责逻辑处理
+    """
 
     class _GameManager:
+        """
+        21点游戏管理类
+        """
         def __init__(self):
             self.is_21gaming = False
             self.start_time_21game = 0
@@ -21,6 +25,9 @@ class MudManager(object):
             self.random_nums_str = ""
 
     def __init__(self):
+        """
+        构造函数
+        """
         self.rooms = ["hall"]
         self.logPlayers = self._loadPlayersInformation('playerInfo.txt')
         self.mud = MudServer()
@@ -29,6 +36,9 @@ class MudManager(object):
         self.gameManager = self._GameManager()
 
     def _loadPlayersInformation(self, file_name):
+        """
+        导入存盘用户信息
+        """
         fp = open(file_name, 'r')
         log_players = {}
         while True:
@@ -49,24 +59,38 @@ class MudManager(object):
         return log_players
 
     def sendMessageToAll(self, message):
+        """
+        广播消息
+        """
         for id, value in self.connectPlayers.items():
             self.mud.send_message(id, message)
 
     def sendMessageToRoom(self, rid, message):
+        """
+        房间内广播消息
+        """
         for id, value in self.connectPlayers.items():
             if value["room"] == rid:
                 self.mud.send_message(id, message)
 
     def sendMessageToRoomExceptYourself(self, rid, message, eid):
+        """
+        房间内广播消息，除了自己
+        """
         for id, value in self.connectPlayers.items():
             if value["room"] == rid and id != eid:
                 self.mud.send_message(id, message)
 
     def sendMessageToSomeone(self, did, message):
+        """
+        私信
+        """
         self.mud.send_message(did, message)
 
     def sendHelpMessage(self,id):
-        # send the player back the list of possible commands
+        """
+        发送help信息
+        """
         self.mud.send_message(id, "Commands:")
         self.mud.send_message(id, "  chat     <message>  - said  in the room, e.g. 'chat Hello'")
         self.mud.send_message(id, "  hallchat <message>  - said in the hall ,e.g. 'hallchat hello'")
@@ -82,14 +106,16 @@ class MudManager(object):
 
 
     def work(self):
+        """
+        主循环
+        """
+
         while True:
 
-            # pause for 1/5 of a second on each loop, so that we don't constantly
-            # use 100% CPU time
             time.sleep(0.2)
 
             # 21 game
-            if not self.gameManager.is_21gaming and int(time.strftime("%M"))  == 15:
+            if not self.gameManager.is_21gaming and int(time.strftime("%M"))  == 30:
                 self.gameManager.is_21gaming = True
                 self.gameManager.start_time_21game = time.time()
                 for i in range(0, 4):
@@ -101,7 +127,7 @@ class MudManager(object):
                 self.sendMessageToAll(message)
 
             if self.gameManager.is_21gaming:
-                if time.time() - self.gameManager.start_time_21game >= 30.0:
+                if time.time() - self.gameManager.start_time_21game >= 15.0:
                     self.gameManager.is_21gaming = False
                     self.gameManager.random_nums_21game = []
                     self.gameManager.random_nums_str = ""
@@ -137,17 +163,12 @@ class MudManager(object):
                         self.sendMessageToAll("The 21game winner is: %s" % self.connectPlayers[last_id]["user_name"])
                     self.gameManager.answers_21game = {}
 
-            # 'update' must be called in the loop to keep the game running and give
-            # us up-to-date information
+            # update
             self.mud.update()
 
-            # go through any newly connected players
+            # 处理新连接的用户
             for id in self.mud.get_new_players():
-                # add the new player to the dictionary, noting that they've not been
-                # named yet.
-                # The dictionary key is the player's id number. Start them off in the
-                # 'Tavern' room.
-                # Try adding more player stats - level, gold, inventory, etc
+
                 self.connectPlayers[id] = {
                     "user_name": None,
                     "room": "hall",
@@ -157,34 +178,25 @@ class MudManager(object):
                     "is_online": False,
                     "pass_word": "",
                 }
-                # send the new player a prompt for their name
                 self.mud.send_connect_message(id)
 
-            # go through any recently disconnected players
+            # 处理断开连接的用户
             for id in self.mud.get_disconnected_players():
 
-                # if for any reason the player isn't in the player map, skip them and
-                # move on to the next one
                 if id not in self.connectPlayers: continue
 
-                # go through all the players in the game
                 self.sendMessageToAll("%s quit the game." % self.connectPlayers[id]["user_name"])
 
-                # log user message
                 self.mud.offLogedPlayer(self.connectPlayers[id]["user_name"])
 
-                # remove the player's entry in the player dictionary
                 del (self.connectPlayers[id])
 
-            # go through any new commands sent from players
+            # 处理用户指令
             for id, command, params in self.mud.get_commands():
 
-                # if for any reason the player isn't in the player map, skip them and
-                # move on to the next one
                 if id not in self.connectPlayers: continue
 
-                # if the player hasn't given their name yet, use this first command as their name
-                # 'help' command
+                # ‘help' command
                 if command == "help":
                     self.sendHelpMessage(id)
 
@@ -353,3 +365,8 @@ class MudManager(object):
                 else:
                     # send back an 'unknown command' message
                     self.mud.send_message(id, "Unknown command: %s" % command)
+
+            # 保存用户信息
+            c_time = time.strftime("%S")
+            if int(c_time)  == 30:
+                self.mud.savePlayers()
